@@ -1,0 +1,16 @@
+id = 544144
+length = 52
+nomenclature = 0.M-38-33.A
+recodrCount = 8566
+
+flag_status = 3
+flag_projection = 1
+flag_realCoordinate = 0
+flag_codingType = 0
+flag_generalTable = 0
+flag_signature = 1
+flag_reserve = 0
+
+objectsClassifier = 0
+semanticsClassifier = 0
+

@@ -1,0 +1,76 @@
+id = 465853
+length = 400
+edition = 40000
+controlSum = 27223086
+date = 20051115
+nomenclature = 0.M-38-33.A
+scale = 200000
+listName = —¬≈“À€… ﬂ–
+
+flag_status = 3
+flag_precision = 1
+flag_realCoordinate = 0
+flag_codingType = 0
+flag_generalTable = 0
+flag_signature = 1
+flag_precision = 0
+flag_specSort = 0
+flag_reserveFlag = 0
+
+classifier = 0
+
+XSouthWestCorner = 5.31901e+006
+YSouthWestCorner = 8.42537e+006
+XNorthWestCorner = 5.39314e+006
+YNorthWestCorner = 8.42634e+006
+XNorthEastCorner = 5.39265e+006
+YNorthEastCorner = 8.5e+006
+XSouthEastCorner = 5.31852e+006
+YSouthEastCorner = 8.5e+006
+
+BSouthWestCorner = 0.837758
+LSouthWestCorner = 0.767945
+BNorthWestCorner = 0.849394
+LNorthWestCorner = 0.767945
+BNorthEastCorner = 0.849394
+LNorthEastCorner = 0.785398
+BSouthEastCorner = 0.837758
+LSouthEastCorner = 0.785398
+
+ellipsoidType = 1
+elevationSystem = 1
+materialProjection = 1
+coordinateSystem = 1
+planeUnit = 0
+heightUnit = 0
+frameType = 2
+mapType = 1
+
+updateDate = 19850101
+materialKind = 1
+materialType = 2
+reserve1 = 
+magneticDeclination = 0
+avgMeridianConv = 0
+magneticChange = 0
+declinationUpdate = 
+reserve2 = 
+reliefSection = 20
+reserve3 = 
+deviceResolution = 20000
+
+X_SW_FrameLoacation = 6400
+Y_SW_FrameLoacation = 6399
+X_NW_FrameLoacation = 13813
+Y_NW_FrameLoacation = 6496
+X_NE_FrameLoacation = 13764
+Y_NE_FrameLoacation = 13862
+X_SE_FrameLoacation = 6351
+Y_SE_FrameLoacation = 13862
+
+firstMainParallel = 0
+secondMainParallel = 0
+axialMeridian = 0.771436
+mainPointParallel = 0
+poleLatitude = 0
+poleLongitude = 0
