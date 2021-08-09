@@ -10,59 +10,62 @@ using namespace std;
 
 cMap::cMap():m_ptr_charMap(NULL), m_ptr_passport(NULL), m_ptr_descriptor(NULL),m_ptr_records(NULL){}
 
-short cMap::readSXF(char *p_ptr_filepath)
-{
+short cMap::readSXF(char *p_ptr_filepath) {
     ifstream fileSXF;
-    fileSXF.open(p_ptr_filepath, ios::binary);				    // Проверка на возможность чтения карты
-    if (!fileSXF){
+    fileSXF.open(p_ptr_filepath, ios::binary);                    // Проверка на возможность чтения карты
+    if (!fileSXF) {
         cerr << "Error while opening file\n";
         fileSXF.close();
         return 0;
     }
 
-    fileSXF.seekg(0, ios::end);							    // Нахождение размера карты
+    fileSXF.seekg(0, ios::end);                                // Нахождение размера карты
     unsigned long endPosition = fileSXF.tellg();
     fileSXF.seekg(0, ios::beg);
-    m_ptr_charMap = new char[endPosition];				    // Выделение памяти под всю битовую карту
-    fileSXF.read((char*)(m_ptr_charMap), endPosition);	// Сохранение сырой карты в массив
+    m_ptr_charMap = new char[endPosition];                    // Выделение памяти под всю битовую карту
+    fileSXF.read((char *) (m_ptr_charMap), endPosition);    // Сохранение сырой карты в массив
     fileSXF.close();
 
     cout << "Raw map was read\n";
     return 1;
 }
+
 void cMap::setStructs()
 {
     // Паспорт в карте записан первым, устанавливаем указатель паспотра m_ptr_passport
     // в начало считанной сырой карты:
-    m_ptr_passport = reinterpret_cast<rPassport*>(m_ptr_charMap);  //Считываем первые 400 байт информации
+    m_ptr_passport = reinterpret_cast<rPassport*> (m_ptr_charMap); // 400 байт начальной карты
     // Сразу после паспорта записан дескриптор, устанавливаем указатель дескриптора
     // в позицию начала карты + размер паспорта:
-    m_ptr_descriptor = reinterpret_cast<rDescriptor*>(m_ptr_charMap + sizeof(rPassport)); // Считываем 52 байта дескриптора после паспорта
+    m_ptr_descriptor = reinterpret_cast<rDescriptor*> (m_ptr_charMap + sizeof(rPassport)); // 52 байта дескриптора
     // В дескрипторе хранится информация о количестве записей карты.
-    // Выделяем место под записи:
-    m_ptr_records = new rRecord[m_ptr_descriptor->recordCount];
+     // Выделяем место под записи:
+    m_ptr_records = new rRecord[m_ptr_descriptor->recordCount]; // создаем массив rRedcord с числом записей указанных в дескрипторе
 
 
-    unsigned long usefulCount;	// Количество байт сырых данных карты, которые
+    unsigned long usefulCount = sizeof(rPassport) + sizeof(rDescriptor); //452
+    // Количество байт сырых данных карты, которые
     // уже были интерпретированы как полезные данные
 
-    usefulCount = sizeof(rPassport) + sizeof(rDescriptor);  //400+52 байта
-
-    // Цикл по количеству записей в карте
-    for(unsigned long i = 0; i < m_ptr_descriptor->recordCount; i ++)
+    for (int i = 0; i < m_ptr_descriptor->recordCount; i++)
     {
-        m_ptr_records[i].header = reinterpret_cast<rHeader*>(m_ptr_charMap + usefulCount);
-        m_ptr_records[i].points = (m_ptr_charMap + usefulCount + sizeof(rHeader));
+        m_ptr_records[i].header = reinterpret_cast<rHeader*> (m_ptr_charMap + usefulCount);
+        m_ptr_records[i].points = reinterpret_cast<short*> (m_ptr_charMap + usefulCount + sizeof(rHeader));
 
-        if (m_ptr_records[i].header->subobjectNumber >= 1 )
+        if (m_ptr_records[i].header->subobjectNumber >= 1)  // Если у объекта есть подобъекты устанавливаем смещаем указатель на количество точек
+                                                            // подобъекта
         {
-            unsigned short* pCount = reinterpret_cast<unsigned short*>
-                    (m_ptr_charMap + usefulCount + sizeof(rHeader) + m_ptr_records[i].header->metricLenght + sizeof(short));
+            m_ptr_records[i].subPoints = reinterpret_cast<short*>
+                    (m_ptr_charMap + usefulCount + sizeof(rHeader) + m_ptr_records[i].header->metricPointsCount*2*
+                                                                                                                sizeof(float) + 4);
         }
-        // Увеличваем счетчик интерпретированных байт на размер размер записи
+
         usefulCount += m_ptr_records[i].header->length;
+
     }
+
 }
+
 short cMap::writePassport(char *p_ptr_filepath)
 {
     ofstream outfile;
@@ -235,5 +238,128 @@ short cMap::writeHeaders(char* p_ptr_filepath)
     return 1;
 }
 
+short cMap::writeMetrics(char *p_ptr_filepath)
+{
+    ofstream outfile;
+    outfile.open(p_ptr_filepath);
+    if (!outfile)
+    {
+        cerr << "Unable to write metrics file\n";
+        return 0;
+    }
+
+    for (int i=0; i < m_ptr_descriptor->recordCount; i++) // Цикл по всем записям
+    {
+        unsigned long pointsCount;
+        unsigned long subPointsCount;
+        if (m_ptr_records[i].header -> metricPointsCount >= 65535) // Определение количетва точек в записи
+            pointsCount = m_ptr_records[i].header -> metricPointsCountBig;
+        else
+            pointsCount = m_ptr_records[i].header -> metricPointsCount;
+
+
+        outfile << "-------------  Metric [" << i << "]--------------\n";
+
+        if (m_ptr_records[i].is2dPoint()) // Определение размерности метрики (2D/3D)
+        {
+            if (m_ptr_records[i].isInteger()) // Определение типа данных метрика (Целое/Плав.т)
+            {
+                if (m_ptr_records[i].isShortSize()) // Определение длины типа данных
+                {
+                    r2dPoint<short> *tmpPoint = reinterpret_cast<r2dPoint<short>*>(m_ptr_records[i].points);
+                    for (int j = 0; j < pointsCount; j++)
+                    {
+                        outfile << tmpPoint[j].X << " " << tmpPoint[j].Y << "\n";
+                    }
+                    subPointsCount =( m_ptr_records[i].header->metricLenght - m_ptr_records[i].header->metricPointsCount*2*2 - 4) / 2/ 2;
+                }
+                else                                // long
+                {
+                    r2dPoint<long> *tmpPoint = reinterpret_cast<r2dPoint<long>*> (m_ptr_records[i].points);
+                    for (int j = 0; j < pointsCount; j++)
+                    {
+                        outfile << tmpPoint[j].X << " " << tmpPoint[j].Y << "\n";
+                    }
+                    subPointsCount =( m_ptr_records[i].header->metricLenght - m_ptr_records[i].header->metricPointsCount*2*4 - 4) / 4/ 2;
+                }
+            }
+            else                        // Формат плавающей точки
+            {
+                if (m_ptr_records[i].isShortSize())  // float
+                {
+                    r2dPoint<float> *tmpPoint = reinterpret_cast<r2dPoint<float>*>(m_ptr_records[i].points);
+                    for (int j = 0; j < pointsCount; j++)
+                    {
+                        outfile << tmpPoint[j].X << " " << tmpPoint[j].Y << "\n";
+                    }
+                    if (m_ptr_records[i].header->subobjectNumber > 0)
+                    {
+                        subPointsCount =( m_ptr_records[i].header->metricLenght - m_ptr_records[i].header->metricPointsCount*2*4 - 4) / 4/ 2;
+                        outfile << "0" << subPointsCount << "\n";
+                        r2dPoint<float> *tmpSubPoint = reinterpret_cast<r2dPoint<float>*> (m_ptr_records[i].subPoints);
+                        for (int k = 0; k < subPointsCount; k++)
+                        {
+                            outfile << tmpSubPoint[k].X << " " << tmpSubPoint[k].Y << "\n";
+                        }
+                    }
+
+                }
+                else                    // double
+                {
+                    r2dPoint<double> *tmpPoint = reinterpret_cast<r2dPoint<double>*> (m_ptr_records[i].points);
+                    for (int j = 0; j < pointsCount; j++)
+                    {
+                        outfile << tmpPoint[j].X << " " << tmpPoint[j].Y << "\n";
+                    }
+                    subPointsCount =( m_ptr_records[i].header->metricLenght - m_ptr_records[i].header->metricPointsCount*2*8 - 4) / 8/ 2;
+                }
+            }
+        }
+        else   // Метрика в 3D
+        {
+            if (m_ptr_records[i].isInteger())   // Целый тип
+            {
+                if (m_ptr_records[i].isShortSize())    // short/float, где float - высота
+                {
+                    r3dPoint<short, float> *tmpPoint = reinterpret_cast<r3dPoint<short, float>*>(m_ptr_records[i].points);
+                    for (int j = 0; j < pointsCount; j++)
+                    {
+                        outfile << tmpPoint[j].X << " " << tmpPoint[j].Y << " " << tmpPoint[i].H << "\n";
+                    }
+                }
+                else                                      // long/float
+                {
+                    r3dPoint<long, float> *tmpPoint = reinterpret_cast<r3dPoint<long, float>*> (m_ptr_records[i].points);
+                    for (int j = 0; j < pointsCount; j++)
+                    {
+                        outfile << tmpPoint[j].X << " " << tmpPoint[j].Y << " " << tmpPoint[i].H << "\n";
+                    }
+                }
+            }
+            else                                        // Плавающая точка
+            {
+                if (m_ptr_records[i].isShortSize())     // float/float
+                {
+                    r3dPoint<float, float> *tmpPoint = reinterpret_cast<r3dPoint<float, float>*>(m_ptr_records[i].points);
+                    for (int j = 0; j < pointsCount; j++)
+                    {
+                        outfile << tmpPoint[j].X << " " << tmpPoint[j].Y << " " << tmpPoint[i].H << "\n";
+                    }
+                }
+                else                                    // double/double
+                {
+                    r3dPoint<double, float> *tmpPoint = reinterpret_cast<r3dPoint<double, float>*> (m_ptr_records[i].points);
+                    for (int j = 0; j < pointsCount; j++)
+                    {
+                        outfile << tmpPoint[j].X << " " << tmpPoint[j].Y << " " << tmpPoint[i].H << "\n";
+                    }
+                }
+            }
+        }
+    }
+
+    outfile.close();
+    return 1;
+}
 
 

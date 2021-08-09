@@ -155,12 +155,18 @@ struct r2dPoint
     Point Y;
 };
 
+template<class Point, class Height>
+struct r3dPoint : r2dPoint<Point>
+{
+    Height H;
+};
 
 
 struct rRecord
 {
     rHeader*	header;
     void*		points;
+    void*       subPoints;
 
 
     bool is2dPoint()	// Определение размерности метрики

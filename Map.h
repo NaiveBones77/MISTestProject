@@ -27,6 +27,7 @@ public:
     short writePassport(char *p_ptr_filepath);		// Записать данные паспорта в файл
     short writeDescriptor(char *p_ptr_filepath);    // Записать данные дескриптора в файл
     short writeHeaders(char *p_ptr_filepath);		// Записать данные заголовков в файл
+    short writeMetrics(char *p_ptr_filepath);
 };
 
 #endif //MAP_H
